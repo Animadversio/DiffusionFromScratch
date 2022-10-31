@@ -12,22 +12,30 @@ from easydict import EasyDict as edict
 
 
 class UNet_SD(nn.Module):
-    def __init__(self, cat_unet=True):
+
+    def __init__(self, in_channels=4,
+                 base_channels=320,
+                 time_emb_dim=1280,
+                 context_dim=768,
+                 multipliers=(1, 2, 4, 4),
+                 attn_levels=(0, 1, 2),
+                 nResAttn_block=2,
+                 cat_unet=True):
         super().__init__()
-        self.in_channels = 4
-        self.out_channels = 4
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        base_channels = 320
-        time_proj_dim = 320
-        time_emb_dim = 1280
-        context_dim = 768
-        nlevel = 4
+        self.in_channels = in_channels
+        self.out_channels = in_channels
+        base_channels = base_channels
+        time_emb_dim = time_emb_dim
+        context_dim = context_dim
+        multipliers = multipliers
+        nlevel = len(multipliers)
         self.base_channels = base_channels
-        attn_levels = [0, 1, 2]
-        level_channels = [base_channels * mult for mult in [1, 2, 4, 4]]
+        # attn_levels = [0, 1, 2]
+        level_channels = [base_channels * mult for mult in multipliers]
         # Transform time into embedding
         self.time_embedding = nn.Sequential(OrderedDict({
-            "linear_1": nn.Linear(time_proj_dim, time_emb_dim, bias=True),
+            "linear_1": nn.Linear(base_channels, time_emb_dim, bias=True),
             "act": nn.SiLU(),
             "linear_2": nn.Linear(time_emb_dim, time_emb_dim, bias=True),
         })
@@ -35,7 +43,7 @@ class UNet_SD(nn.Module):
         self.conv_in = nn.Conv2d(self.in_channels, base_channels, 3, stride=1, padding=1)
 
         # Tensor Downsample blocks
-        nResAttn_block = 2
+        nResAttn_block = nResAttn_block
         self.down_blocks = TimeModulatedSequential()  # nn.ModuleList()
         self.down_blocks_channels = [base_channels]
         cur_chan = base_channels
@@ -81,14 +89,13 @@ class UNet_SD(nn.Module):
             nn.Conv2d(base_channels, self.out_channels, 3, padding=1),
         )
         self.to(self.device)
-
     def time_proj(self, time_steps, max_period: int = 10000):
         if time_steps.ndim == 0:
             time_steps = time_steps.unsqueeze(0)
         half = self.base_channels // 2
         frequencies = torch.exp(- math.log(max_period)
-             * torch.arange(start=0, end=half, dtype=torch.float32) / half
-        ).to(device=time_steps.device)
+                                * torch.arange(start=0, end=half, dtype=torch.float32) / half
+                                ).to(device=time_steps.device)
         angles = time_steps[:, None].float() * frequencies[None, :]
         return torch.cat([torch.cos(angles), torch.sin(angles)], dim=-1)
 
