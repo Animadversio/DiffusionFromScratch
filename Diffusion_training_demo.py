@@ -156,8 +156,11 @@ def train_score_model(score_model, dataset, lr, n_epochs, batch_size, ckpt_name,
 #%%
 
 #%%
+from tqdm import tqdm
+from torch.utils.data import DataLoader, TensorDataset
 from torchvision.datasets import CelebA
 from torchvision.transforms import ToTensor, CenterCrop, Resize, Compose, Normalize
+
 tfm = Compose([
     Resize(32),
     CenterCrop(32),
@@ -167,9 +170,7 @@ tfm = Compose([
 dataset_rsz = CelebA("/home/binxuwang/Datasets", target_type=["attr"],
                     transform=tfm, download=False) # ,"identity"
 #%%
-from torch.utils.data import DataLoader, TensorDataset
-from tqdm import tqdm
-
+# def preprocess_dataset(dataset_rsz, ):
 dataloader = DataLoader(dataset_rsz, batch_size=64, num_workers=8, shuffle=False)
 x_col = []
 y_col = []
@@ -181,12 +182,12 @@ y_col = torch.concat(y_col, dim=0)
 print(x_col.shape)
 print(y_col.shape)
 
-maxlen = (y_col.sum(dim=1)).max()
 nantoken = 40
-yseq_data = torch.ones(y_col.size(0), maxlen,
-                       dtype=int).fill_(nantoken)
+maxlen = (y_col.sum(dim=1)).max()
+yseq_data = torch.ones(y_col.size(0), maxlen, dtype=int).fill_(nantoken)
 
 saved_dataset = TensorDataset(x_col, yseq_data)
+# return saved_dataset
 #%%
 import matplotlib.pyplot as plt
 

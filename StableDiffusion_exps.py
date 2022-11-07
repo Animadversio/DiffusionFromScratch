@@ -35,6 +35,8 @@ pipe = StableDiffusionPipeline.from_pretrained(
 ).to("cuda")
 def dummy_checker(images, **kwargs): return images, False
 pipe.safety_checker = dummy_checker
+#%%
+recursive_print(pipe.unet, deepest=2)
 #%% Text to
 # prompt = "a photo of an ballerina riding a horse on mars"
 prompt = "A ballerina riding a Harley Motorcycle, CG Art"
@@ -76,13 +78,13 @@ def save_latents(i, t, latents):
 prompt = "A ballerina chasing her cat running on the grass in the style of Monet"
 prompt = "A kitty cat dressed like Lincoln, old timey style"
 with autocast("cuda"):
-    image = pipe(prompt, callback=None)["sample"][0]  # plot_show_callback
+    image = pipe(prompt, callback=plot_show_callback)["sample"][0]  # plot_show_callback
 
 image.save("cat_Lincoln.png")
 plt_show_image(image)
 #%%
 len(latents_reservoir)
-plt_show_image(latents_reservoir[-10][0, [0, 1, 2,], :].permute(1, 2, 0).cpu().numpy() / 1.6 + 0.4)
+plt_show_image(latents_reservoir[-1][0, [0, 1, 2,], :].permute(1, 2, 0).cpu().numpy() / 1.6 + 0.4)
 #%% Visualize architecture
 
 #%% Full unets
